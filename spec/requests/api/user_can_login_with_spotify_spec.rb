@@ -5,12 +5,11 @@ RSpec.describe 'GET /omniauth/spotify', type: :request do
   let(:json) { response_json }
   before do
     OmniAuth.config.test_mode = true
-    OmniAuth.config.before_callback_phase do |env|
-      env['omniauth.origin'] = 'https://example.com/'
-    end
     OmniAuth.config.mock_auth[:spotify] = OmniAuth::AuthHash.new(OmniAuthFixtures.spotify_response)
     Rails.application.env_config['devise.mapping'] = Devise.mappings[:user] # If using Devise
-    Rails.application.env_config['omniauth.auth'] = OmniAuth.config.mock_auth[:spotify]
+    allow_any_instance_of(ActionDispatch::Request)
+      .to receive(:session)
+      .and_return('dta.omniauth.auth': OmniAuth.config.mock_auth[:spotify])
   end
   describe 'WITH "resource_class" in params' do
     before do
@@ -24,12 +23,13 @@ RSpec.describe 'GET /omniauth/spotify', type: :request do
 
     it 'is expected to responde with key user and spotify_info' do
       expect(json)
-        .to have_key('user')
-        .and have_key('spotify_info')      
+        .to have_key('data')
+        .and have_key('oauth_info')
+        .and have_key('message')      
     end
 
-    it 'is expected to return user data' do
-      expect(json['spotify_info'])
+    it 'is expected to return oauth data' do
+      expect(json['oauth_info'])
         .to have_key('name')
         .and have_value('Lara Thordardottir')
         .and have_key('email')
@@ -43,11 +43,11 @@ RSpec.describe 'GET /omniauth/spotify', type: :request do
         .and have_key('token-type')
         .and have_key('expiry')
         .and have_key('uid')
-        .and have_key('spotify_credentials')      
+        .and have_key('oauth_credentials')      
     end
 
     it 'is expected to have valide spotify_credential headers' do
-      expect(headers['spotify_credentials'])
+      expect(headers['oauth_credentials'])
         .to have_key('token')
         .and have_key('refresh_token')
         .and have_key('expires_at')
@@ -67,8 +67,9 @@ RSpec.describe 'GET /omniauth/spotify', type: :request do
 
     it 'is expected to responde with key user and spotify_info' do
       expect(json)
-        .to have_key('user')
-        .and have_key('spotify_info')
+        .to have_key('data')
+        .and have_key('oauth_info')
+        .and have_key('message')
     end
   end
 end
